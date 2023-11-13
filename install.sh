@@ -82,7 +82,7 @@ pause
 
 # 准备工作
 apt update
-apt install -y curl sudo jq qrencode
+apt install -y curl jq
 
 # Xray官方脚本 安装最新版本
 echo
