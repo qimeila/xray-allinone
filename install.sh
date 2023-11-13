@@ -26,7 +26,6 @@ pause() {
 # 说明
 echo
 echo -e "$yellow此脚本仅兼容于Debian 10+系统. 如果你的系统不符合,请Ctrl+C退出脚本$none"
-echo -e "可以去 ${cyan}https://github.com/crazypeace/xray-vless-reality${none} 查看脚本整体思路和关键命令, 以便针对你自己的系统做出调整."
 echo "----------------------------------------------------------------"
 
 uuidSeed=$(curl -sL https://www.cloudflare.com/cdn-cgi/trace | grep -oP 'ip=\K.*$')$(cat /proc/sys/kernel/hostname)$(cat /etc/timezone)
@@ -307,73 +306,33 @@ cat > /usr/local/etc/xray/config.json <<-EOF
     }
   ],
   "outbounds": [
-    {
-      "protocol": "freedom",
-      "tag": "direct"
-    },
-// [outbound]
-{
-    "protocol": "freedom",
-    "settings": {
-        "domainStrategy": "UseIPv4"
-    },
-    "tag": "force-ipv4"
-},
-{
-    "protocol": "freedom",
-    "settings": {
-        "domainStrategy": "UseIPv6"
-    },
-    "tag": "force-ipv6"
-},
-{
-    "protocol": "socks",
-    "settings": {
-        "servers": [{
-            "address": "127.0.0.1",
-            "port": 40000 //warp socks5 port
-        }]
-     },
-    "tag": "socks5-warp"
-},
-    {
-      "protocol": "blackhole",
-      "tag": "block"
-    }
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
+        }
   ],
   "dns": {
     "servers": [
       "8.8.8.8",
       "1.1.1.1",
-      "2001:4860:4860::8888",
-      "2606:4700:4700::1111",
       "localhost"
     ]
   },
   "routing": {
     "domainStrategy": "IPIfNonMatch",
     "rules": [
-// [routing-rule]
-//{
-//     "type": "field",
-//     "domain": ["geosite:google", "geosite:openai"],  // ***
-//     "outboundTag": "force-ipv6"  // force-ipv6 // force-ipv4 // socks5-warp
-//},
-{
-     "type": "field",
-     "domain": ["geosite:cn"],  // ***
-     "outboundTag": "force-ipv6"  // force-ipv6 // force-ipv4 // socks5-warp // blocked
-},
-{
-     "type": "field",
-     "ip": ["geoip:cn"],  // ***
-     "outboundTag": "force-ipv6"  // force-ipv6 // force-ipv4 // socks5-warp // blocked
-},
-      {
-        "type": "field",
-        "ip": ["geoip:private"],
-        "outboundTag": "block"
-      }
+        {
+            "type": "field",
+            "ip": [
+                "geoip:cn",
+                "geoip:private"
+            ],
+            "outboundTag": "block"
+        }
     ]
   }
 }
@@ -416,56 +375,6 @@ vless_reality_url="vless://${uuid}@${ip}:${port}?flow=xtls-rprx-vision&encryptio
 echo -e "${cyan}${vless_reality_url}${none}"
 echo
 sleep 3
-echo "以下两个二维码完全一样的内容"
-qrencode -t UTF8 $vless_reality_url
-qrencode -t ANSI $vless_reality_url
-echo
-echo "---------- END -------------"
-echo "以上节点信息保存在 ~/_vless_reality_url_ 中"
 
-# 节点信息保存到文件中
-echo $vless_reality_url > ~/_vless_reality_url_
-echo "以下两个二维码完全一样的内容" >> ~/_vless_reality_url_
-qrencode -t UTF8 $vless_reality_url >> ~/_vless_reality_url_
-qrencode -t ANSI $vless_reality_url >> ~/_vless_reality_url_
 
-# 如果是 IPv6 小鸡，用 WARP 创建 IPv4 出站
-if [[ $netstack == "6" ]]; then
-    echo
-    echo -e "$yellow这是一个 IPv6 小鸡，用 WARP 创建 IPv4 出站$none"
-    echo "Telegram电报是直接访问IPv4地址的, 需要IPv4出站的能力"
-    echo -e "如果WARP安装不顺利, 请在命令行执行${cyan} bash <(curl -L https://ghproxy.crazypeace.workers.dev/https://github.com/crazypeace/warp.sh/raw/main/warp.sh) 4 ${none}"
-    echo "----------------------------------------------------------------"
-    pause
 
-    # 安装 WARP IPv4
-    bash <(curl -L git.io/warp.sh) 4
-
-    # 重启 Xray
-    echo
-    echo -e "$yellow重启 Xray$none"
-    echo "----------------------------------------------------------------"
-    service xray restart
-
-# 如果是 IPv4 小鸡，用 WARP 创建 IPv6 出站
-elif  [[ $netstack == "4" ]]; then
-    echo
-    echo -e "$yellow这是一个 IPv4 小鸡，用 WARP 创建 IPv6 出站$none"
-    echo -e "有些热门小鸡用原生的IPv4出站访问Google需要通过人机验证, 可以通过修改config.json指定google流量走WARP的IPv6出站解决"
-    echo -e "群组: ${cyan} https://t.me/+ISuvkzFGZPBhMzE1 ${none}"
-    echo -e "教程: ${cyan} https://zelikk.blogspot.com/2022/03/racknerd-v2ray-cloudflare-warp--ipv6-google-domainstrategy-outboundtag-routing.html ${none}"
-    echo -e "视频: ${cyan} https://youtu.be/Yvvm4IlouEk ${none}"
-    echo -e "如果WARP安装不顺利, 请在命令行执行${cyan} bash <(curl -L https://ghproxy.crazypeace.workers.dev/https://github.com/crazypeace/warp.sh/raw/main/warp.sh) 6 ${none}"
-    echo "----------------------------------------------------------------"
-    pause
-
-    # 安装 WARP IPv6
-    bash <(curl -L git.io/warp.sh) 6
-
-    # 重启 Xray
-    echo
-    echo -e "$yellow重启 Xray$none"
-    echo "----------------------------------------------------------------"
-    service xray restart
-
-fi
