@@ -327,11 +327,9 @@ cat > /usr/local/etc/xray/config.json <<-EOF
     "rules": [
         {
             "type": "field",
-            "ip": [
-                "geoip:cn",
-                "geoip:private"
-            ],
-            "outboundTag": "block"
+            "domain": ["geosite:cn"],
+            "ip": ["geoip:cn"],
+            "outboundTag": "direct"
         }
     ]
   }
