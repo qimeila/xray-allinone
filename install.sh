@@ -330,7 +330,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
                         "port": 40000
                     }
                 ],
-                "domainStrategy": "UseIP" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv4”(Pv6 优先)
+                "domainStrategy": "UseIPv6" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv6”(Pv6 优先)
             }
         },
         {
