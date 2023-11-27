@@ -276,7 +276,7 @@ echo "----------------------------------------------------------------"
 if [[ $warp == "true" ]]; then
 　echo -e "$yellow用 WARP 创建出站$none"
   bash <(curl -fsSL git.io/warp.sh) s5
-　cat > /usr/local/etc/xray/config.json <<-EOF
+cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
   "log": {
     "access": "/var/log/xray/access.log",
@@ -368,7 +368,7 @@ if [[ $warp == "true" ]]; then
 }
 EOF
 else
-  cat > /usr/local/etc/xray/config.json <<-EOF
+cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
   "log": {
     "access": "/var/log/xray/access.log",
