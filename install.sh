@@ -273,7 +273,7 @@ fi
 echo
 echo -e "$yellow 配置 /usr/local/etc/xray/config.json $none"
 echo "----------------------------------------------------------------"
-if [$warp]; then
+if [[ $warp == "true" ]]; then
 　echo -e "$yellow用 WARP 创建出站$none"
   bash <(curl -fsSL git.io/warp.sh) s5
 　cat > /usr/local/etc/xray/config.json <<-EOF
