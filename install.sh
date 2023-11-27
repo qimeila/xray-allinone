@@ -71,10 +71,17 @@ if [ $# -ge 1 ]; then
         uuid=${default_uuid}
     fi
 
+    # 第5个参数是warp
+    warp=${5}
+    if [[ -z $warp ]]; then
+      warp=false
+    fi
+
     echo -e "$yellow netstack: ${netstack} ${none}"
     echo -e "$yellow 端口 (Port) = ${cyan}${port}${none}"
     echo -e "$yellow 用户ID (User ID / UUID) = $cyan${uuid}${none}"
     echo -e "$yellow SNI = ${cyan}$domain${none}"
+    echo -e "$yellow 启用WARP = ${cyan}$warp${none}"
     echo "----------------------------------------------------------------"
 fi
 
@@ -266,7 +273,102 @@ fi
 echo
 echo -e "$yellow 配置 /usr/local/etc/xray/config.json $none"
 echo "----------------------------------------------------------------"
-cat > /usr/local/etc/xray/config.json <<-EOF
+if [warp==true]; then
+　echo -e "$yellow用 WARP 创建出站$none"
+  bash <(curl -fsSL git.io/warp.sh) s5
+　cat > /usr/local/etc/xray/config.json <<-EOF
+{ // VLESS + Reality
+  "log": {
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${port},    // ***
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${uuid}",    // ***
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "${domain}:443",    // ***
+          "xver": 0,
+          "serverNames": ["${domain}"],    // ***
+          "privateKey": "${private_key}",    // ***私钥
+          "shortIds": ["${shortid}"]    // ***
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }
+  ],
+  "outbounds": [
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        { // 出站 SOCKS5 代理。WARP 官方客户端
+            "tag": "WARP_out",
+            "protocol": "socks",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "127.0.0.1",
+                        "port": 40000
+                    }
+                ],
+                "domainStrategy": "UseIP" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv4”(Pv6 优先)
+            }
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
+        }
+  ],
+  "dns": {
+    "servers": [
+      "8.8.8.8",
+      "1.1.1.1",
+      "localhost"
+    ]
+  },
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+        {
+            "type": "field",
+            "domain": ["geosite:cn"],
+            "ip": ["geoip:cn"],
+            "outboundTag": "WARP_out"
+        },
+        { // 网站分流。指定网站走 WARP
+            "domain": [
+                "geosite:google",
+                "geosite:netflix",
+                "geosite:openai"
+            ],
+            "outboundTag": "WARP_out",
+            "type": "field"
+        }
+    ]
+  }
+}
+EOF
+else
+  cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
   "log": {
     "access": "/var/log/xray/access.log",
@@ -335,6 +437,9 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
+fi
+
+
 
 # 重启 Xray
 echo
