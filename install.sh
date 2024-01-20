@@ -74,7 +74,7 @@ if [ $# -ge 1 ]; then
     # 第5个参数是warp
     warp=${5}
     if [[ -z $warp ]]; then
-      warp=false
+      warp=0
     fi
 
     echo -e "$yellow netstack: ${netstack} ${none}"
@@ -272,9 +272,9 @@ fi
 echo
 echo -e "$yellow 配置 /usr/local/etc/xray/config.json $none"
 echo "----------------------------------------------------------------"
-if [[ $warp == "true" ]]; then
-　echo -e "$yellow 用 WARP 创建出站 $none"
-  bash <(curl -fsSL git.io/warp.sh) s5
+bash <(curl -fsSL git.io/warp.sh) s5
+if [[ $warp == 0 ]]; then
+　echo -e "$yellow 只使用warp出站cn流量 $none"
 cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
   "log": {
@@ -329,12 +329,8 @@ cat > /usr/local/etc/xray/config.json <<-EOF
                         "port": 40000
                     }
                 ],
-                "domainStrategy": "UseIPv6" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv6”(Pv6 优先)
+                "domainStrategy": "UseIP" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv6”(Pv6 优先)
             }
-        },
-        {
-            "protocol": "blackhole",
-            "tag": "block"
         }
   ],
   "dns": {
@@ -352,21 +348,13 @@ cat > /usr/local/etc/xray/config.json <<-EOF
             "domain": ["geosite:cn"],
             "ip": ["geoip:cn"],
             "outboundTag": "WARP_out"
-        },
-        { // 网站分流。指定网站走 WARP
-            "domain": [
-                "geosite:google",
-                "geosite:netflix",
-                "geosite:openai"
-            ],
-            "outboundTag": "WARP_out",
-            "type": "field"
         }
     ]
   }
 }
 EOF
-else
+else if [[ $warp == 1 ]]; then
+　echo -e "$yellow 使用warp出站cn和google、netfilx流量 $none"
 cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
   "log": {
@@ -411,9 +399,18 @@ cat > /usr/local/etc/xray/config.json <<-EOF
             "protocol": "freedom",
             "tag": "direct"
         },
-        {
-            "protocol": "blackhole",
-            "tag": "block"
+        { // 出站 SOCKS5 代理。WARP 官方客户端
+            "tag": "WARP_out",
+            "protocol": "socks",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "127.0.0.1",
+                        "port": 40000
+                    }
+                ],
+                "domainStrategy": "UseIP" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv6”(Pv6 优先)
+            }
         }
   ],
   "dns": {
@@ -430,8 +427,108 @@ cat > /usr/local/etc/xray/config.json <<-EOF
             "type": "field",
             "domain": ["geosite:cn"],
             "ip": ["geoip:cn"],
-            "outboundTag": "direct"
+            "outboundTag": "WARP_out"
+        },
+        { // 网站分流。指定网站走 WARP
+            "domain": [
+                "geosite:google",
+                "geosite:netflix",
+                "geosite:openai"
+            ],
+            "outboundTag": "WARP_out",
+            "type": "field"
         }
+    ]
+  }
+}
+EOF
+else if [[ $warp == 2 ]]; then
+　echo -e "$yellow 使用warp提供ipv4出站 $none"
+cat > /usr/local/etc/xray/config.json <<-EOF
+{ // VLESS + Reality
+  "log": {
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${port},    // ***
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${uuid}",    // ***
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "${domain}:443",    // ***
+          "xver": 0,
+          "serverNames": ["${domain}"],    // ***
+          "privateKey": "${private_key}",    // ***私钥
+          "shortIds": ["${shortid}"]    // ***
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }
+  ],
+  "outbounds": [
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        { // 出站 SOCKS5 代理。WARP 官方客户端
+            "tag": "WARP_out",
+            "protocol": "socks",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "127.0.0.1",
+                        "port": 40000
+                    }
+                ],
+                "domainStrategy": "UseIP" // "UseIP"(双栈自适应)、”UseIPv4”(IPv4 优先)、”UseIPv6”(Pv6 优先)
+            }
+        },
+        {
+          "type": "dns",
+          "tag": "secure-dns"
+        }
+  ],
+  "dns": {
+    "servers": [
+      "https://1.1.1.1/dns-query"
+    ]
+  },
+  "routing": {
+    "domainStrategy": "IPOnDemand",
+    "rules": [
+      {
+        "network": "udp",
+        "port": 53,
+        "outbound": "secure-dns"
+      },
+      { // IPv6 直连出站规则
+        "type": "field",
+        "ip": [ "::/0" ],
+        "outboundTag": "direct"
+      },
+      { // IPv4 WARP 出站规则
+        "type": "field",
+        "ip": [ "0.0.0.0/0" ],
+        "outboundTag": "WARP_out"
+      }
     ]
   }
 }
@@ -477,6 +574,3 @@ vless_reality_url="vless://${uuid}@${ip}:${port}?flow=xtls-rprx-vision&encryptio
 echo -e "${cyan}${vless_reality_url}${none}"
 echo
 sleep 3
-
-
-
