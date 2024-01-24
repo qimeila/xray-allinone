@@ -601,13 +601,15 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
+else
+  echo -e "$yellow 未改变xray配置 $none"
 fi
 
 
 
 # 重启 Xray
 echo
-echo -e "$yellow重启 Xray$none"
+echo -e "$yellow 重启 Xray $none"
 echo "----------------------------------------------------------------"
 service xray restart
 
