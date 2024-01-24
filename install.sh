@@ -273,7 +273,7 @@ echo
 echo -e "$yellow 配置 /usr/local/etc/xray/config.json $none"
 echo "----------------------------------------------------------------"
 
-if [[ $warp == 0 ]]; then
+if [[ $warp == "0" ]]; then
 　echo -e "$yellow 只使用warp出站cn流量 $none"
   bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -354,7 +354,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
-else if [[ $warp == 1 ]]; then
+else if [[ $warp == "1" ]]; then
 　echo -e "$yellow 使用warp出站cn和google、netfilx流量 $none"
   bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -444,7 +444,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
-else if [[ $warp == 2 ]]; then
+else if [[ $warp == "2" ]]; then
 　echo -e "$yellow 使用warp提供ipv4出站 $none"
   bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -536,7 +536,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
-else if [[ $warp == 3 ]]; then
+else if [[ $warp == "3" ]]; then
 　echo -e "$yellow 不使用warp $none"
 cat > /usr/local/etc/xray/config.json <<-EOF
 { // VLESS + Reality
