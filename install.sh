@@ -274,6 +274,73 @@ echo -e "$yellow 配置 /usr/local/etc/xray/config.json $none"
 echo "----------------------------------------------------------------"
 
 if [[ $warp == "0" ]]; then
+echo
+echo -e "$yellow 不使用warp $none"
+echo "----------------------------------------------------------------"
+cat > /usr/local/etc/xray/config.json <<-EOF
+{ // VLESS + Reality
+  "log": {
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": ${port},    // ***
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${uuid}",    // ***
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "${domain}:443",    // ***
+          "xver": 0,
+          "serverNames": ["${domain}"],    // ***
+          "privateKey": "${private_key}",    // ***私钥
+          "shortIds": ["${shortid}"]    // ***
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    }
+  ],
+  "outbounds": [
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        }
+  ],
+  "dns": {
+    "servers": [
+      "https://1.1.1.1/dns-query"
+    ]
+  },
+  "routing": {
+    "domainStrategy": "IPOnDemand",
+    "rules": [
+      {
+        "type": "field",
+        "domain": ["geosite:cn"],
+        "ip": ["geoip:cn"],
+        "outboundTag": "direct"
+      }
+    ]
+  }
+}
+EOF
+elif [[ $warp == "1" ]]; then
 echo -e "$yellow 只使用warp出站cn流量 $none"
 bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -354,7 +421,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
-elif [[ $warp == "1" ]]; then
+elif [[ $warp == "2" ]]; then
 echo -e "$yellow 使用warp出站cn和google、netfilx流量 $none"
 bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -444,7 +511,7 @@ cat > /usr/local/etc/xray/config.json <<-EOF
   }
 }
 EOF
-elif [[ $warp == "2" ]]; then
+elif [[ $warp == "3" ]]; then
 echo -e "$yellow 使用warp提供ipv4出站 $none"
 bash <(curl -fsSL git.io/warp.sh) s5
 cat > /usr/local/etc/xray/config.json <<-EOF
@@ -531,73 +598,6 @@ cat > /usr/local/etc/xray/config.json <<-EOF
         "type": "field",
         "ip": [ "0.0.0.0/0" ],
         "outboundTag": "WARP_out"
-      }
-    ]
-  }
-}
-EOF
-elif [[ $warp == "3" ]]; then
-echo
-echo -e "$yellow 不使用warp $none"
-echo "----------------------------------------------------------------"
-cat > /usr/local/etc/xray/config.json <<-EOF
-{ // VLESS + Reality
-  "log": {
-    "access": "/var/log/xray/access.log",
-    "error": "/var/log/xray/error.log",
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "listen": "0.0.0.0",
-      "port": ${port},    // ***
-      "protocol": "vless",
-      "settings": {
-        "clients": [
-          {
-            "id": "${uuid}",    // ***
-            "flow": "xtls-rprx-vision"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "${domain}:443",    // ***
-          "xver": 0,
-          "serverNames": ["${domain}"],    // ***
-          "privateKey": "${private_key}",    // ***私钥
-          "shortIds": ["${shortid}"]    // ***
-        }
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls", "quic"]
-      }
-    }
-  ],
-  "outbounds": [
-        {
-            "protocol": "freedom",
-            "tag": "direct"
-        }
-  ],
-  "dns": {
-    "servers": [
-      "https://1.1.1.1/dns-query"
-    ]
-  },
-  "routing": {
-    "domainStrategy": "IPOnDemand",
-    "rules": [
-      {
-        "type": "field",
-        "domain": ["geosite:cn"],
-        "ip": ["geoip:cn"],
-        "outboundTag": "direct"
       }
     ]
   }
